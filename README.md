@@ -1,4 +1,4 @@
-GermSimulationWithMySQL
+GermSimulation
 =======================
 
-Germ Simulation with MySQL for Test Neuron Network
+Germ Simulation for Test Neuron Network
