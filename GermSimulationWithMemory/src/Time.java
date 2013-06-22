@@ -34,7 +34,7 @@ public class Time {
 	public void increaseTime(){
 		time3++;
 		term++;
-		if(term / (100 * checkCnt) >= 1){
+		if(term / (1000000 * checkCnt) >= 1){
 			check = true;
 			checkCnt++;
 		}

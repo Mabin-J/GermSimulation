@@ -239,10 +239,10 @@ public class GermBrain{
 	
 	public void putSignal(Time time, int sensorNeuronNum, int signalPower){
 		try {
-			rs = stmt.executeQuery("SELECT * FROM connection WHERE neuron_idx = " + sensorNeuronNum + ";");
+			rs = stmt2.executeQuery("SELECT * FROM connection WHERE neuron_idx = " + sensorNeuronNum + ";");
 			
 			while(rs.next()){
-				stmt2.execute("UPDATE connection SET time1 = " + time.getTime1() 
+				stmt.execute("UPDATE connection SET time1 = " + time.getTime1() 
 						+ ", time2 = " + time.getTime2() 
 						+ ", time3 = " + time.getTime3() 
 						+ ", signalPower = " + (signalPower + rs.getInt("signalPower"))

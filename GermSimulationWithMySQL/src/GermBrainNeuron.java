@@ -143,14 +143,20 @@ public class GermBrainNeuron extends Thread{
 							brain.stimulateActor(thisJob.targetNeuronNum);
 						} else {
 							rs = stmt.executeQuery("SELECT * FROM connection WHERE neuron_idx = " + thisJob.targetNeuronNum + ";");
+							
+							rs2 = stmt2.executeQuery("SELECT Count(*) AS count FROM connection WHERE neuron_idx = " + thisJob.targetNeuronNum + ";");
+							rs2.next();
+							
+							int connectionAmount = rs2.getInt("count");
+							signalPowerSum /= connectionAmount;
+							
 							while(rs.next()){
-								signalPowerSum /= connectionIdxs.size();
 								thisJob.time.increaseTime();
 								stmt2.executeUpdate("UPDATE connection SET time1 = " + thisJob.time.getTime1() 
 										+ ", time2 = " + thisJob.time.getTime2() 
 										+ ", time3 = " + thisJob.time.getTime3() 
 										+ ", signalPower = " + (rs.getInt("signalPower") + signalPowerSum)
-										+ " WHERE neuron_idx = " + thisJob.targetNeuronNum + ";");
+										+ " WHERE idx = " + rs.getInt("idx") + ";");
 								
 								GermBrainNeuronJob newJob = new GermBrainNeuronJob();
 								newJob.time = new Time(thisJob.time);
