@@ -217,13 +217,16 @@ public class GermBrainNeuron extends Thread{
 /* TODO: Remove
 							rs = stmt.executeQuery("SELECT * FROM connection WHERE neuron_idx = " + thisJob.targetNeuronNum + ";");
 */
+							
+							int connectionAmount = myDb.countItems(where, DataContainer.NAME_CONNECTION);
+							signalPowerSum /= connectionAmount;
+							
 							while(rs2.next()){
-								signalPowerSum /= connectionIdxs.size();
 								thisJob.time.increaseTime();
 								
 								Map<String, Object> update = new HashMap<String, Object>();
 								where.clear();
-								where.put("neuron_idx", thisJob.targetNeuronNum);
+								where.put("idx", rs2.getInt("idx"));
 								update.put("time1", thisJob.time.getTime1());
 								update.put("time2", thisJob.time.getTime2());
 								update.put("time3", thisJob.time.getTime3());

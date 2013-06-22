@@ -44,7 +44,7 @@ public class Main {
 		neuronConfig.put("threadAmount", 4);
 		neuronConfig.put("defaultScore", 1000);
 		neuronConfig.put("connectionMinAmount", 1);
-		neuronConfig.put("connectionMaxAmount", 5);
+		neuronConfig.put("connectionMaxAmount", 10);
 		neuronConfig.put("signalThreshold", 1000);
 		neuronConfig.put("signalDefaultPower", 1000);
 		neuronConfig.put("signalDecreasePowerPerTurn", 1);
