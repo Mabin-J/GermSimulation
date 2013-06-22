@@ -14,15 +14,23 @@ import java.util.Random;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import javax.xml.crypto.Data;
+
+import DataContainer.DataContainer;
+import DataContainer.MyResultSet;
+
 
 public class GermBrain{
 	Germ master;
 	Map<String, String> dbConfig;
 	Map<String, Integer> neuronConfig;
+/*
 	Connection conn;
 	Statement stmt = null;
 	Statement stmt2 = null;
-	ResultSet rs = null;
+*/
+	DataContainer myDb;
+	
 	private List<GermBrainNeuronJob> jobQueue;
 	Map<Integer, Integer> actorNeuronNums;
 	Random randNum;
@@ -36,12 +44,15 @@ public class GermBrain{
 		this.dbConfig = dbConfig;
 		this.neuronConfig = neuronConfig;
 		
+		myDb = new DataContainer();
+		
 		neuronsThread = new GermBrainNeuron[neuronConfig.get("threadAmount")];
 		
 		randNum = new Random();
 		
 		actorNeuronNums = new HashMap<Integer, Integer>();
 		
+/*
 		try{
 			Class.forName("com.mysql.jdbc.Driver").newInstance();
 		} catch(Exception e){
@@ -49,7 +60,7 @@ public class GermBrain{
 		}
 		
 		conn = null;
-		
+
 		try{
 			conn = DriverManager.getConnection("jdbc:mysql://" + dbConfig.get("host") + "/" + dbConfig.get("dbname")
 					, dbConfig.get("username")
@@ -74,6 +85,9 @@ public class GermBrain{
 			
 			return;
 		}
+		
+*/
+
 		threadLock = new ReentrantLock();
 		jobQueue = new ArrayList<GermBrainNeuronJob>(100);
 		
@@ -90,58 +104,6 @@ public class GermBrain{
 		}
 	}
 	
-	public List<Map<String, Object>> getData(String query){
-		try{
-//			stmt = conn.createStatement();
-			rs = stmt.executeQuery(query);
-			
-			while(rs.next()){
-				
-			}
-		}catch(Exception e){
-			System.out.println("SQLException: " + e.getMessage());
-/*
- 			System.out.println("SQLState: " + e.getSQLState());
-			System.out.println("VendorError: " + e.getErrorCode());
-*/
-		}
-		
-		return null;
-	}
-	
-	private void createTables(){
-		String query = "";
-		String querys[];
-
-		System.out.print("GermBrain: Create Tables... ");
-		
-		try{
-			String tmpLine;
-			FileReader initSQLfr = new FileReader("./SQL/init.sql");
-			BufferedReader initSQLbr = new BufferedReader(initSQLfr);
-			while((tmpLine = initSQLbr.readLine()) != null)
-				query += tmpLine + "\n";
-			initSQLbr.close();
-			initSQLfr.close();
-		} catch(Exception e){
-			e.printStackTrace();
-			return;
-		}
-		
-		querys = query.split(";");
-		
-		try{
-			for(int i = 0; i < querys.length - 1; i++){
-				stmt.executeUpdate(querys[i]);	
-			}
-		} catch(SQLException e){
-			System.out.println("SQLException: " + e.getMessage());
- 			System.out.println("SQLState: " + e.getSQLState());
-			System.out.println("VendorError: " + e.getErrorCode());
-		}
-		System.out.println("GermBrain: Complete\n");
-	}
-	
 	private void initNeuron() {
 		System.out.println("GermBrain: Initializing Neurons...");
 		int neuronAmount = neuronConfig.get("neuronAmount");
@@ -154,21 +116,35 @@ public class GermBrain{
 		System.out.println("GermBrain:   Create Neurons...");
 		int tenPercentsAmountOfNeuron = neuronAmount / 10;
 
-		try{
+//		try{
 			for(int neuronNumber = 0; neuronNumber < neuronSensorAmount; neuronNumber++){
+				Map<String, Object> item = new HashMap<String, Object>();
+				item.put("idx", neuronNumber);
+				item.put("threshold", neuronConfig.get("signalThreshold"));
+				item.put("type", 1);
+				myDb.putData(item, DataContainer.NAME_NEURONS);
+/*	TODO: Remove
 				stmt.executeUpdate("INSERT INTO neurons (`idx`, `threshold`, `type`) "
-						+ "VALUES (" + neuronNumber + ", " + neuronConfig.get("signalThreshold") + ", 1)");	
+						+ "VALUES (" + neuronNumber + ", " + neuronConfig.get("signalThreshold") + ", 1)");
+*/	
 			}
 			
 			
 			for(int neuronNumber = neuronSensorAmount; neuronNumber < neuronAmount; neuronNumber++){
+				Map<String, Object> item = new HashMap<String, Object>();
+				item.put("idx", neuronNumber);
+				item.put("threshold", neuronConfig.get("signalThreshold"));
+				item.put("type", 0);
+				myDb.putData(item, DataContainer.NAME_NEURONS);
+/*	TODO: Remove
 				stmt.executeUpdate("INSERT INTO neurons (`idx`, `threshold`, `type`) "
 						+ "VALUES (" + neuronNumber + ", " + neuronConfig.get("signalThreshold") + ", 0)");
-				
+*/				
 				if(neuronNumber % tenPercentsAmountOfNeuron == 0){
 					System.out.println("GermBrain:      " + neuronNumber / tenPercentsAmountOfNeuron + "0%");
 				}
 			}
+			
 			System.out.println("GermBrain:     100% Complete.\n");
 			
 			System.out.println("GermBrain:   Connecting Neurons Randomly...");
@@ -187,8 +163,15 @@ public class GermBrain{
 				}
 				
 				for(int j = 0; j < targetAmount; j++){
+					Map<String, Object> item = new HashMap<String, Object>();
+					item.put("neuron_idx", neuronNumber);
+					item.put("target_idx", tmpTargets.get(j));
+					item.put("score", defaultScore);
+					myDb.putData(item, DataContainer.NAME_CONNECTION);
+/* TODO: Remove
 					stmt.executeUpdate("INSERT INTO connection (`neuron_idx`, `target_idx`, `score`) "
 							+ "VALUES (" + neuronNumber + ", " + tmpTargets.get(j) + ", " + defaultScore + ");");
+*/
 				}
 				if(neuronNumber % tenPercentsAmountOfNeuron == 0){
 					System.out.println("GermBrain:      " + neuronNumber / tenPercentsAmountOfNeuron + "0%");
@@ -200,16 +183,36 @@ public class GermBrain{
 			int tmpNeuronNumber = neuronAmount / 2;
 			
 			for(int selectedNeuronAmount = 0; selectedNeuronAmount < neuronActorAmount;){
-				rs = stmt.executeQuery("SELECT COUNT(*) AS count FROM connection WHERE target_idx = " + tmpNeuronNumber + " GROUP BY target_idx;");
 				int connectionAmount = 0;
+				
+				Map<String, Object> where = new HashMap<String, Object>();
+				where.put("target_idx", tmpNeuronNumber);
+				connectionAmount = myDb.countItems(where, DataContainer.NAME_CONNECTION);
+				
+/* TODO: Remove				
+				rs = stmt.executeQuery("SELECT COUNT(*) AS count FROM connection WHERE target_idx = " + tmpNeuronNumber + " GROUP BY target_idx;");
+				
 				if(rs.next()){
 					connectionAmount = rs.getInt("count");
 				}
-
+*/
 				if(connectionAmount != 0){
+					Map<String, Object> update = new HashMap<String, Object>();
+					where.clear();
+					
+					update.put("type", 2);
+					where.put("idx", tmpNeuronNumber);
+					myDb.updateData(update, where, DataContainer.NAME_NEURONS);
+					
+					where.clear();
+					where.put("neuron_idx", tmpNeuronNumber);
+					myDb.removeData(where, DataContainer.NAME_CONNECTION);
+					
+/* TODO: Remove
 					Statement stmt2 = conn.createStatement();
 					stmt2.executeUpdate("UPDATE neurons SET type = 2 WHERE idx = " + tmpNeuronNumber + ";");
 					stmt2.executeUpdate("DELETE FROM connection WHERE neuron_idx = " + tmpNeuronNumber + ";");
+*/
 					actorNeuronNums.put(tmpNeuronNumber, selectedNeuronAmount);
 					System.out.println("GermBrain:     Neuron" + tmpNeuronNumber + " is selected.");
 					selectedNeuronAmount++;
@@ -218,14 +221,23 @@ public class GermBrain{
 				tmpNeuronNumber++;
 			}
 			
-		} catch(SQLException e){
+//		} catch(SQLException e){
+//			e.printStackTrace();
+//		}
+			
+		System.out.println("\nGermBrain: Initializing Neurons Complete.\n");
+		try{
+			Thread.sleep(1000);
+		} catch (Exception e){
 			e.printStackTrace();
 		}
-		System.out.println("\nGermBrain: Initializing Neurons Complete.\n");
 	}
 	
 	private void clearNeuron(){
 		System.out.print("GermBrain: Clear Neurons... ");
+		myDb.init();
+		
+/* TODO: Remove
 		try{
 			stmt.executeUpdate("TRUNCATE TABLE neurons");
 			stmt.executeUpdate("TRUNCATE TABLE connection");
@@ -233,27 +245,46 @@ public class GermBrain{
 		}catch(SQLException e){
 			e.printStackTrace();
 		}
-		
+*/
 		System.out.println("GermBrain: Compete.");
 	}
 	
 	public void putSignal(Time time, int sensorNeuronNum, int signalPower){
 		try {
-			rs = stmt.executeQuery("SELECT * FROM connection WHERE neuron_idx = " + sensorNeuronNum + ";");
+			Map<String, Object> where = new HashMap<String, Object>();
+			where.put("neuron_idx", sensorNeuronNum);
+			ResultSet rs2 = myDb.getResultSet(where, DataContainer.NAME_CONNECTION);
+/* TODO: Remove			
+			rs2 = stmt.executeQuery("SELECT * FROM connection WHERE neuron_idx = " + sensorNeuronNum + ";");
+*/			
 			
-			while(rs.next()){
+			while(rs2.next()){
+//				System.out.println("idx: " + rs.getInt("idx"));
+				
+				Map<String, Object> update = new HashMap<String, Object>();
+				where.clear();
+				
+				update.put("time1", time.getTime1());
+				update.put("time2", time.getTime2());
+				update.put("time3", time.getTime3());
+				update.put("signalPower", (signalPower + rs2.getInt("signalPower")));
+				where.put("idx", rs2.getInt("idx"));
+				myDb.updateData(update, where, DataContainer.NAME_CONNECTION);
+				
+/* TODO: Remove
 				stmt2.execute("UPDATE connection SET time1 = " + time.getTime1() 
 						+ ", time2 = " + time.getTime2() 
 						+ ", time3 = " + time.getTime3() 
 						+ ", signalPower = " + (signalPower + rs.getInt("signalPower"))
 						+ " WHERE idx = " + rs.getInt("idx") + ";");
+*/
 				
 				GermBrainNeuronJob newJob = new GermBrainNeuronJob();
 				newJob.time = new Time(time);
 				newJob.time.increaseTime();
 				
 				newJob.requestNeuronNum = sensorNeuronNum;
-				newJob.targetNeuronNum = rs.getInt("target_idx");
+				newJob.targetNeuronNum = rs2.getInt("target_idx");
 				threadLock.lock();
 				jobQueue.add(newJob);
 				threadLock.unlock();
@@ -286,8 +317,16 @@ public class GermBrain{
 		int neuron_idx = 0;
 		int tmpTarget = 0;
 		
+		ResultSet rs;
+		
 		try {
+			Map<String, Object> where = new HashMap<String, Object>();
+			where.put("idx", connectionIdx);
+			rs = myDb.getResultSet(where, DataContainer.NAME_CONNECTION);
+			
+/* TODO: Remove			
 			rs = stmt.executeQuery("SELECT * FROM connection WHERE idx = " + connectionIdx + ";");
+*/
 			rs.next();
 			neuron_idx = rs.getInt("neuron_idx");
 			int tmpPoint = rs.getInt("target_idx");
@@ -295,6 +334,18 @@ public class GermBrain{
 			while(true){
 				tmpTarget = tmpPoint + (int) ((Math.abs(randNum.nextInt())) % (connectionMaxAmount * 2)) - connectionMaxAmount;
 				
+				where.clear();
+				where.put("neuron_idx", neuron_idx);
+				where.put("target_idx", tmpTarget);
+	
+				int count = myDb.countItems(where, DataContainer.NAME_CONNECTION);
+				if(count == 0)
+					break;
+				else
+					if(connectionMaxAmount <= count)
+						connectionMaxAmount = count * 2;
+				
+/* TODO: Remove				
 				rs = stmt.executeQuery("SELECT COUNT(*) as count FROM connection WHERE neuron_idx = " + neuron_idx + " AND target_idx = " + tmpTarget + " GROUP BY neuron_idx;");
 				if(!rs.next()){
 					break;
@@ -303,11 +354,27 @@ public class GermBrain{
 						connectionMaxAmount = rs.getInt("count") * 2;
 					}
 				}
+*/
 			}
 			
+			Map<String, Object> insert = new HashMap<String, Object>();
+			
+			insert.put("neuron_idx", neuron_idx);
+			insert.put("target_idx", tmpTarget);
+			insert.put("score", defaultScore);
+			myDb.putData(insert, DataContainer.NAME_CONNECTION);
+			
+			Map<String, Object> update = new HashMap<String, Object>();
+			where.clear();
+			update.put("score", defaultScore);
+			where.put("idx", connectionIdx);
+			myDb.updateData(update, where, DataContainer.NAME_CONNECTION);
+			
+/*TODO Remove
 			stmt.executeUpdate("INSERT INTO connection (`neuron_idx`, `target_idx`, `score`) "
 					+ "VALUES (" + neuron_idx + ", " + tmpTarget + ", " + defaultScore + ");");
 			stmt.executeUpdate("UPDATE connection SET score = " + defaultScore + " WHERE idx = " + connectionIdx + ";");
+*/
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

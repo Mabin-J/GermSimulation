@@ -1,15 +1,30 @@
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+import DataContainer.DataContainer;
+import DataContainer.MyResultSet;
 
 
 public class Main {
-	public static void main(String[] args){
-		Map<String, String> dbConfig;
-		
-		Map<String, Integer> natureConfig;
-		Map<String, Integer> germConfig;
-		Map<String, Integer> neuronConfig;
-		Map<String, Integer> foodConfig;
+	public static Lock globalLock;
+	public static boolean pauseSignal = false;
+	
+	private static Map<String, String> dbConfig;
+	
+	private static Map<String, Integer> natureConfig;
+	private static Map<String, Integer> germConfig;
+	private static Map<String, Integer> neuronConfig;
+	private static Map<String, Integer> foodConfig;
+	
+	public static void main(String[] args) throws InterruptedException{
+		globalLock = new ReentrantLock();
 		
 		dbConfig = new HashMap<String, String>(8);
 		dbConfig.put("host", "localhost");
@@ -52,12 +67,81 @@ public class Main {
 		nature.setNewFood();
 		germ.born();
 		
+		int cnt = 0;
+		
 		while(true){
+			//TODO: Menu (contain MySQL Backup)
+			cnt++;
+			
+			if(cnt >= 10){
+				System.out.println("Backup2MySQL Start");
+				pauseSignal = true;
+				Thread.sleep(1000);
+				backup2mysql();
+				System.out.println("Backup2MySQL Complete");
+				pauseSignal = false;
+				cnt = -300;
+			}
+			
 			try{
 				Thread.sleep(1000);
 			} catch (Exception e){
 				e.printStackTrace();
 			}
 		}
+	}
+
+	private static void backup2mysql() {
+		// TODO Auto-generated method stub
+		DataContainer myDC = new DataContainer();
+		
+		ResultSet neuron = myDC.getResultSet(DataContainer.NAME_NEURONS);
+		ResultSet connections = myDC.getResultSet(DataContainer.NAME_CONNECTION);
+		
+		try{
+			Class.forName("com.mysql.jdbc.Driver").newInstance();
+		} catch(Exception e){
+			System.out.println("Cannot Found ConnectorJ Class");
+		}
+		
+		Connection conn = null;
+		Statement stmt = null;
+		
+		try{
+			conn = DriverManager.getConnection("jdbc:mysql://" + dbConfig.get("host") + "/" + dbConfig.get("dbname")
+					, dbConfig.get("username")
+					, dbConfig.get("password"));
+			stmt = conn.createStatement();	
+			
+			stmt.executeUpdate("TRUNCATE TABLE neurons");
+			stmt.executeUpdate("TRUNCATE TABLE connection");
+			
+			while(neuron.next()){
+				stmt.executeUpdate("INSERT INTO neurons (`idx`, `threshold`, `type`) "
+						+ "VALUES (" + neuron.getInt("idx") + ", " + neuron.getInt("threshold") + ", " + neuron.getInt("type") + ")");
+			}
+			
+			while(connections.next()){
+				stmt.executeUpdate("INSERT INTO connection (`idx`, `neuron_idx`, `target_idx`, `time1`, `time2`, `time3`, `score`, `signalPower`) "
+						+ "VALUES (" 
+						+ connections.getInt("idx") + ", "
+						+ connections.getInt("neuron_idx") + ", " 
+						+ connections.getInt("target_idx") + ", " 
+						+ connections.getInt("time1") + ", " 
+						+ connections.getInt("time2") + ", " 
+						+ connections.getInt("time3") + ", " 
+						+ connections.getInt("score") + ", " 
+						+ connections.getInt("signalPower") + ")");
+			}
+
+			stmt.close();
+			conn.close();
+		} catch(SQLException e){
+			System.out.println("SQLException: " + e.getMessage());
+			System.out.println("SQLState: " + e.getSQLState());
+			System.out.println("VendorError: " + e.getErrorCode());
+		}
+		
+		
 	}
 }
